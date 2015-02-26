@@ -1,0 +1,6 @@
+Maserati_Biturbo 1998 84 349000
+Maserati_Coupe 2000 76 499000
+Maserat_Ghibli 2004 100 1921000
+Maserati_GranCabrio 2012 47 2490000
+Maserati_Granturismo 2011 20 2000000
+Maserati_Quattroporte_SQ4 2013 3 2978999
