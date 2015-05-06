@@ -1,0 +1,371 @@
+#!/bin/sh
+
+# Author: Frantisek Sumsal <xsumsa01@stud.fit.vutbr.cz>
+#         BUT FIT (1 BIB - 36) 
+# File: wedi
+# Date: 17.3.2015
+
+WEDI_EDITOR=""
+WEDI_EDITOR_RC=0
+WEDI_FILENAME=""
+WEDI_FILEPATH=""
+WEDI_HELP="Wrapper around default text editor with option to automatically choose file to edit
+Usage:
+\twedi [DIR]\t\tOpens the last edited file from given directory
+\t\t\t\tIf directory is not specified, current working directory will be used
+\twedi FILE
+\twedi -l [DIR]\t\tLists all EXISTING files which were edited via wedi
+\t\t\t\tIf directory is not specified, current working directory will be used
+\twedi -m [DIR]\t\tPrints the most edited file in given directory
+\t\t\t\tIf directory is not specified, current working directory will be used
+\twedi -b DATE [DIR]\tLists all EXISTING files which were edited via wedi before given date
+\t\t\t\tDate must be in format YYYY-MM-DD
+\t\t\t\tIf directory is not specified, current working directory will be used
+\twedi -a DATE [DIR]\tLists all EXISTING files which were edited via wedi after given date
+\t\t\t\tDate must be in format YYYY-MM-DD
+\t\t\t\tIf directory is not specified, current working directory will be used
+"
+
+### Function defenitions ###
+
+wedi_sanity_check() {
+    # WEDI_RC must be defined and must contain path to our settings file
+    if [ -z "${WEDI_RC+x}" ]; then
+        >&2 echo "Variable WEDI_RC is not defined, can't continue..."
+        exit 1
+    fi
+
+    # We need to know which editor we should start
+    if [ ! -z "${EDITOR+x}" ]; then
+        WEDI_EDITOR="$EDITOR"
+    elif [ ! -z "${VISUAL+x}" ]; then
+        WEDI_EDITOR="$VISUAL"
+    else
+        >&2 echo "Couldn't determine text editor (variables EDITOR and VISUAL are undefined)"
+        exit 1
+    fi
+}
+
+# Finds absolute path of given directory/file
+# I just wanted to avoid using utilities like realpath, readlink, etc.
+wedi_abspath() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_abspath()!"; fi
+
+    local WEDI_TMP_DIR="$1"
+
+    if [ -f "$1" ]; then 
+        WEDI_TMP_DIR=${WEDI_TMP_DIR%/*}
+    fi
+
+    if [ ! -d "$WEDI_TMP_DIR" ]; then
+        >&2 echo "Directory $WEDI_TMP_DIR doesn't exist, can't continue..."
+        exit 1
+    fi
+
+    cd "$WEDI_TMP_DIR"
+    WEDI_TMP_PATH=$(pwd)
+    cd "$OLDPWD"
+
+    echo "$WEDI_TMP_PATH"
+}
+
+# Splits path passed as first agrument into variables WEDI_FILENAME and WEDI_FILEPATH
+# WEDI_FILEPATH is then normalized to absolute path
+# If 'path' is a directory, WEDI_FILENAME is not set
+wedi_fill_path_vars() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_fill_path_vars()!"; fi
+
+    if [ -d "$1" ]; then
+        WEDI_FILEPATH=$(wedi_abspath "$1")
+    else
+        WEDI_FILENAME=${1##*/}
+
+        # If file name is equal to directory name, then the file is probably located in current directory
+        if [ "${1%/*}" = "$WEDI_FILENAME" ]; then
+            WEDI_FILEPATH=$(pwd)
+        else
+            WEDI_FILEPATH=$(wedi_abspath "${1%/*}")
+        fi
+    fi
+}
+
+# Updates existing file path record in our local database with new timestamp
+# $1 = file path
+wedi_config_update() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_update()!"; fi
+
+    local WEDI_CURRTIME=$(date +%s)
+    local WEDI_EDIT_COUNT=$(grep -Ee "^[0-9]+ [0-9]+ $1$" "$WEDI_RC" 2>/dev/null | awk '{ print $2 }')
+    local WEDI_EXPR=""
+
+    WEDI_EDIT_COUNT=$((WEDI_EDIT_COUNT+1))
+    WEDI_EXPR=$(echo "$1" | sed -e 's/[\/&]/\\&/g' 2>/dev/null)
+    sed -i '' -E "s/^[0-9]+ [0-9]+ $WEDI_EXPR$/$WEDI_CURRTIME $WEDI_EDIT_COUNT $WEDI_EXPR/" "$WEDI_RC" >/dev/null 2>&1
+
+    return $?
+}
+
+# Checks if given path exists in our local database
+# $1 = file path
+wedi_config_check() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_check()!"; fi
+
+    grep -Ee "^[0-9]+ [0-9]+ $1$" "$WEDI_RC" >/dev/null 2>&1
+
+    return $?
+}
+
+# Format timestamp:type(f,d):path
+# $1 = path, $2 = filename [optional]
+wedi_config_save_file() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_save_file()!"; fi
+
+    local WEDI_PATH=""
+
+    if [ ! -n "$WEDI_FILENAME" ]; then
+        >&2 echo "You're probably trying to save directory into wedi rc file. That's not possible."
+        exit 1
+    fi
+
+    WEDI_PATH="$1"
+
+    if [ "$1" != "*/" ]; then
+        WEDI_PATH="$WEDI_PATH/"
+    fi
+
+    WEDI_PATH="$WEDI_PATH$2"
+
+    wedi_config_check "$WEDI_PATH"
+
+    if [ $? = 0 ]; then
+        # File already exists in our database, so let's just update its timestamp
+        wedi_config_update "$WEDI_PATH"
+        if [ $? != 0 ]; then
+            >&2 echo "An error occured while updating $WEDI_RC"
+            exit 1
+        fi
+    else
+        echo "$(date +%s) 1 $WEDI_PATH" >> "$WEDI_RC"
+    fi
+}
+
+# Gets last edited and EXISTING file in given directory from our local database
+# $1 = directory
+wedi_config_last_edited() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_last_edited()!"; fi
+
+    local WEDI_GREPRES=$(grep -Ee "^[0-9]+ [0-9]+ $1/[^\/]+$" "$WEDI_RC" 2>/dev/null | sort -rnk1 | awk '{ print $3 }')
+
+    for file in $WEDI_GREPRES; do
+        if [ -e "$file" ]; then
+            echo "${file##*/}"
+            break
+        fi
+    done
+}
+
+# Gets list of EXISTING files in given directory from our local database
+# $1 = directory [optional]
+wedi_config_list_files() {
+    local WEDI_FILEPATH=""
+
+    if [ -z "$1" ]; then
+        WEDI_FILEPATH=$(pwd)
+    else
+        WEDI_FILEPATH=$(wedi_abspath "$1")
+    fi
+
+    if [ ! -d "$WEDI_FILEPATH" ]; then
+        >&2 echo "Argument is not a directory, can't continue..."
+        exit 1
+    fi
+
+    local WEDI_FNRC=1
+    local WEDI_GREPRES=$(grep -Ee "^[0-9]+ [0-9]+ $WEDI_FILEPATH/[^\/]+$" "$WEDI_RC" 2>/dev/null | sort -rnk1 | awk '{ print $3 }')
+
+    for file in $WEDI_GREPRES; do
+        if [ -e "$file" ]; then
+            echo "${file##*/}"
+            WEDI_FNRC=0
+        fi
+    done
+
+    return $WEDI_FNRC
+}
+
+# Gets the most edited and EXISTING file in given directory from our local database
+# $1 = directory [optional]
+wedi_config_most_edited() {
+    local WEDI_FILEPATH=""
+
+    if [ -z "$1" ]; then
+        WEDI_FILEPATH=$(pwd)
+    else
+        WEDI_FILEPATH=$(wedi_abspath "$1")
+    fi
+
+    local WEDI_GREPRES=$(grep -Ee "^[0-9]+ [0-9]+ $WEDI_FILEPATH/[^\/]+$" "$WEDI_RC" 2>/dev/null | sort -rnk2 | awk '{ print $3 }')
+
+    for file in $WEDI_GREPRES; do
+        if [ -e "$file" ]; then
+            echo "${file##*/}"
+            break
+        fi
+    done
+}
+
+# Lists all existing files last edited before given date
+# $1 = date string, $2 = path [optional]
+wedi_config_list_before() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_list_before()!"; fi
+
+    local WEDI_CONV_DATE=$(date -j -f "%Y-%m-%d" "$1" "+%s" 2>/dev/null)
+    local WEDI_PATH=$2
+    local WEDI_FNRC=1
+
+    if [ -z "$WEDI_PATH" ]; then
+        WEDI_PATH=$(pwd)
+    else
+        WEDI_PATH=$(wedi_abspath "$WEDI_PATH")
+    fi
+
+    if [ -z "$WEDI_CONV_DATE" ]; then
+        >&2 echo "Invalid date string $1 (accepted format: YYYY-MM-DD)"
+        exit 1
+    fi
+
+    local WEDI_GREPRES=$(grep -Ee "^[0-9]+ [0-9]+ $WEDI_PATH/[^\/]+$" "$WEDI_RC" 2>/dev/null | sort -rnk1 | 
+                        awk -v x="$WEDI_CONV_DATE" '{ if($1 < x) print $3; }')
+    
+    for file in $WEDI_GREPRES; do
+        if [ -e "$file" ]; then
+            echo "${file##*/}"
+            WEDI_FNRC=0
+        fi
+    done
+
+    return $WEDI_FNRC
+}
+
+# Lists all existing files last edited after given date
+# $ = date string, $2 = path [optional]
+wedi_config_list_after() {
+    if [ -z "$1" ]; then >&2 echo "Missing first parameter in wedi_config_list_after()!"; fi
+
+    local WEDI_CONV_DATE=$(date -j -f "%Y-%m-%d" "$1" "+%s" 2>/dev/null)
+    local WEDI_PATH="$2"
+    local WEDI_FNRC=1
+
+    if [ -z "$WEDI_PATH" ]; then
+        WEDI_PATH=$(pwd)
+    else
+        WEDI_PATH=$(wedi_abspath "$WEDI_PATH")
+    fi
+
+    if [ -z "$WEDI_CONV_DATE" ]; then
+        >&2 echo "Invalid date string $1 (accepted format: YYYY-MM-DD)"
+        exit 1
+    fi
+
+    local WEDI_GREPRES=$(grep -Ee "^[0-9]+ [0-9]+ $WEDI_PATH/[^\/]+$" "$WEDI_RC" 2>/dev/null | sort -rnk1 | 
+                        awk -v x="$WEDI_CONV_DATE" '{ if($1 > x) print $3; }')
+    
+    for file in $WEDI_GREPRES; do
+        if [ -e "$file" ]; then
+            echo "${file##*/}"
+            WEDI_FNRC=0
+        fi
+    done
+
+    return $WEDI_FNRC
+}
+
+### Main script section ###
+
+# Do a basic sanity check
+wedi_sanity_check
+
+# Parse arguments from command line
+while getopts :mlb:a:h OPT; do
+    case $OPT in
+        m)
+            # Prints the most edited (and existing) file from WEDI_RC
+            WEDI_MOST_EDITED=$(wedi_config_most_edited "$(eval echo \${$OPTIND})")
+
+            if [ -z "$WEDI_MOST_EDITED" ]; then
+                >&2 echo "Couldn't find any file from given directory in my database, can't continue..."
+                exit 1
+            fi
+
+            $WEDI_EDITOR "$WEDI_MOST_EDITED"
+            WEDI_EDITOR_RC=$?
+            wedi_fill_path_vars "$WEDI_MOST_EDITED"
+            wedi_config_save_file "$WEDI_FILEPATH" "$WEDI_FILENAME"
+
+            exit $WEDI_EDITOR_RC
+            ;;
+        l)
+            # Lists all existing files from given directory in WEDI_RC
+            wedi_config_list_files "$(eval echo \${$OPTIND})"
+            exit $?
+            ;;
+        b)
+            # Lists all existing files last edited before given date
+            # This is really awful workaround, but it should be enough for this project
+            wedi_config_list_before "$OPTARG" "$(eval echo \${$OPTIND})"
+            exit $?
+            ;;
+        a)
+            # Lists all existing files last edited after given date
+            wedi_config_list_after "$OPTARG" "$(eval echo \${$OPTIND})"
+            exit $?
+            ;;
+        h)
+            echo -e "$WEDI_HELP"
+            exit 0
+            ;;
+        \?)
+            >&2 echo "Unrecognized option -$OPTARG"
+            exit 1
+            ;;
+        :)
+            >&2 echo "Argument -$OPTARG required a value"
+            exit 1
+            ;;
+    esac
+done
+
+# Remove parsed arguments from arguments array
+shift $((OPTIND-1)) 
+
+# Check if the first argument is empty. 
+# If so, then our default path is current directory
+if [ -z "${1+x}" ]; then
+    WEDI_TARGET=$(pwd)
+else
+    WEDI_TARGET="$1"
+fi
+
+wedi_fill_path_vars "$WEDI_TARGET"
+
+if [ -d "$WEDI_TARGET" ]; then
+    # Argument is an existing directory
+    WEDI_LAST=$(wedi_config_last_edited "$WEDI_FILEPATH")
+
+    if [ -z "$WEDI_LAST" ]; then 
+        >&2 echo "Couldn't find any file from $WEDI_FILEPATH in my database, can't continue..."
+        exit 1
+    else
+        $WEDI_EDITOR "$WEDI_LAST"
+        WEDI_EDITOR_RC=$?
+        wedi_fill_path_vars "$WEDI_LAST"
+        wedi_config_save_file "$WEDI_FILEPATH" "$WEDI_FILENAME"
+    fi
+else
+    # File doesn't exist, let's create it
+    $WEDI_EDITOR "$WEDI_TARGET"
+    WEDI_EDITOR_RC=$?
+    wedi_config_save_file "$WEDI_FILEPATH" "$WEDI_FILENAME"
+fi
+
+exit $WEDI_EDITOR_RC
