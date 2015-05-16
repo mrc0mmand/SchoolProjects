@@ -1,0 +1,111 @@
+digraph finite_state_machine {
+	rankdir=LR;
+	node [shape = ellipse];
+
+	TEST1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST1 -> TEST2 [ label = "KEY=X/01000" ];
+	TEST1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST1 -> TEST1  [ label = "others/00000" ];
+	
+	TEST2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST2 -> TEST3_KEY1 [ label = "KEY=X1/01000" ];
+	TEST2 -> TEST3_KEY2 [ label = "KEY=X2/01000" ];
+	TEST2 -> TEST_FAIL [ label = "KEY<>X1,X2,15/01000" ];
+	TEST2 -> TEST2  [ label = "others/00000" ];
+
+	TEST3_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST3_KEY1 -> TEST4_KEY1 [ label = "KEY=X/01000" ];
+	TEST3_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST3_KEY1 -> TEST3_KEY1  [ label = "others/00000" ];
+
+	TEST3_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST3_KEY2 -> TEST4_KEY2 [ label = "KEY=X/01000" ];
+	TEST3_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST3_KEY2 -> TEST3_KEY2  [ label = "others/00000" ];
+
+	TEST4_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST4_KEY1 -> TEST5_KEY1 [ label = "KEY=X/01000" ];
+	TEST4_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST4_KEY1 -> TEST4_KEY1  [ label = "others/00000" ];
+
+	TEST4_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST4_KEY2 -> TEST5_KEY2 [ label = "KEY=X/01000" ];
+	TEST4_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST4_KEY2 -> TEST4_KEY2  [ label = "others/00000" ];
+
+	TEST5_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST5_KEY1 -> TEST6_KEY1 [ label = "KEY=X/01000" ];
+	TEST5_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST5_KEY1 -> TEST5_KEY1  [ label = "others/00000" ];
+
+	TEST5_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST5_KEY2 -> TEST6_KEY2 [ label = "KEY=X/01000" ];
+	TEST5_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST5_KEY2 -> TEST5_KEY2  [ label = "others/00000" ];
+
+	TEST6_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST6_KEY1 -> TEST7_KEY1 [ label = "KEY=X/01000" ];
+	TEST6_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST6_KEY1 -> TEST6_KEY1  [ label = "others/00000" ];
+
+	TEST6_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST6_KEY2 -> TEST7_KEY2 [ label = "KEY=X/01000" ];
+	TEST6_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST6_KEY2 -> TEST6_KEY2  [ label = "others/00000" ];
+
+	TEST7_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST7_KEY1 -> TEST8_KEY1 [ label = "KEY=X/01000" ];
+	TEST7_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST7_KEY1 -> TEST7_KEY1  [ label = "others/00000" ];
+
+	TEST7_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST7_KEY2 -> TEST8_KEY2 [ label = "KEY=X/01000" ];
+	TEST7_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST7_KEY2 -> TEST7_KEY2  [ label = "others/00000" ];
+
+	TEST8_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST8_KEY1 -> TEST9_KEY1 [ label = "KEY=X/01000" ];
+	TEST8_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST8_KEY1 -> TEST8_KEY1  [ label = "others/00000" ];
+
+	TEST8_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST8_KEY2 -> TEST9_KEY2 [ label = "KEY=X/01000" ];
+	TEST8_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST8_KEY2 -> TEST8_KEY2  [ label = "others/00000" ];
+
+	TEST9_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST9_KEY1 -> TEST10_KEY1 [ label = "KEY=X/01000" ];
+	TEST9_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST9_KEY1 -> TEST9_KEY1  [ label = "others/00000" ];
+
+	TEST9_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST9_KEY2 -> TEST10_KEY2 [ label = "KEY=X/01000" ];
+	TEST9_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST9_KEY2 -> TEST9_KEY2  [ label = "others/00000" ];
+
+	TEST10_KEY1 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST10_KEY1 -> TEST_SUCESS [ label = "KEY=X/01000" ];
+	TEST10_KEY1 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST10_KEY1 -> TEST10_KEY1  [ label = "others/00000" ];
+
+	TEST10_KEY2 -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST10_KEY2 -> TEST_SUCCESS [ label = "KEY=X/01000" ];
+	TEST10_KEY2 -> TEST_FAIL [ label = "KEY<>X,15/01000" ];
+	TEST10_KEY2 -> TEST10_KEY2  [ label = "others/00000" ];
+
+	TEST_SUCCESS -> PRINT_ACCESS_GRANTED [ label = "KEY=15/10000" ];
+	TEST_SUCCESS -> TEST_FAIL [ label = "KEY<>15/01000" ];
+	TEST_SUCCESS -> TEST_SUCCESS  [ label = "others/00000" ];
+
+	TEST_FAIL -> PRINT_ACCESS_DENIED [ label = "KEY=15/10000" ];
+	TEST_FAIL -> TEST_FAIL  [ label = "others/00000" ];
+
+	PRINT_ACCESS_DENIED -> FINISH [ label = "CNT_OF=1/11110" ];
+	PRINT_ACCESS_DENIED -> PRINT_ACCESS_DENIED  [ label = "others/00000" ];
+
+	PRINT_ACCESS_GRANTED -> FINISH [ label = "CNT_OF=1/10110" ];
+	PRINT_ACCESS_GRANTED -> PRINT_ACCESS_GRANTED  [ label = "others/00000" ];
+	
+	FINISH -> TEST1 [ label = "KEY=15/00001" ];
+	FINISH -> FINISH  [ label = "others/00000" ];
+}
