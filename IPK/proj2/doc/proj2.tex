@@ -1,0 +1,106 @@
+% !TeX spellcheck = cs_CZ
+\documentclass[10pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{fullpage}
+\usepackage{times}
+\usepackage{sectsty}
+\usepackage{verbatim}
+\usepackage{enumitem}
+
+\makeatletter
+\newcommand{\verbatimfont}[1]{\def\verbatim@font{\fontfamily{Courier}}}
+\makeatother
+\setlength{\parindent}{0pt}
+
+\begin{document}
+\begin{center}
+	\Large{\textbf{IPK: Přenos souborů}} \\
+	\textbf{Popis aplikačního protokolu}
+\end{center}
+	
+\section{Úvod}
+	Cílem projektu bylo vytvoření aplikačního protokolu pro jednoduchý přenos souborů mezi klientem a serverem, pomocí protokolu TCP.
+\section{Implementace}
+	Samotná implementace se skládá z velmi jednoduchého protokolu. První požadavek zasílá klient, kde formát vypadá následovně:
+	\begin{verbatim}
+		IPK VER CMD FILENAME
+	\end{verbatim}
+	
+	Jednotlivé elementy mají následující význam:
+	\begin{description}[labelindent=1cm]
+		\item[IPK] Označení protokolu, v našem případě je to všude právě IPK
+		\item[VER] Verze protokolu, v aktuální implementaci se nijak nekontroluje
+		\item[CMD] Příkaz, který serveru říká, zda-li chceme soubor nahrávat či stahovat (PUT/GET)
+		\item[FILENAME] Název souboru, se kterým se bude provádět předchozí operace
+	\end{description}
+	
+	S pomocí výše uvedených informací jsme nyní schopni sestavit skutečné příklady:
+	\begin{verbatim}
+		IPK 0.1 PUT image.jpg    # Nahrání souboru image.jpg na server 
+		IPK 0.1 GET invoice.pdf  # Stáhnutí souboru invoice.pdf ze serveru
+	\end{verbatim}
+		
+	\noindent Na tyto žádosti server odpovídá následující zprávou:
+	\begin{verbatim}
+		XX STATUS_MSG
+	\end{verbatim}
+	
+	kde \textbf{XX} je číslo stavového kódu a \textbf{STATUS\_MSG} zpráva, která se k danému kódu vztahuje. V případě, že je kód roven nule, je žádost validní a je možno přistoupit k vlastnímu přenosu dat. Z důvodu synchronizace musí klient před začátkem odesílání/přijímání dat odeslat serveru zprávu \textbf{READY}, čímž říká, že je připraven k přenosu. V opačném případě je spojení ukončeno a klient může z výše uvedené zprávy zjistit, kde došlo k chybě.
+	
+	Po této krátké výměně zpráv již dochází k vlastnímu přenosu, který je ukončen jednou ze stran - v případě žádosti \textbf{GET} se jedná o server (přečtení konce souboru), v případě \textbf{PUT} jde o klienta (tentýž důvod).\newline
+	
+	Server také obsahuje kontrolu jmen souborů, aby klient nemohl pracovat se soubory mimo aktuální složku serveru.
+	
+	\section{Příklady komunikace}
+	Samotný server přijímá pouze jediný parametr \textbf{-p} společně s označením portu, na kterém bude poslouchat:
+	\begin{verbatim}
+		./server -p 12345
+	\end{verbatim}
+	
+	Nyní je server připraven pro požadavky klienta:
+	\begin{verbatim}
+		./client -h localhost -p 12345 -u myfile
+		Uploading file 'myfile'
+		Waiting for server
+		File uploaded
+	\end{verbatim}
+	
+	Na serverové části můžeme vidět následující výstup:
+	\begin{verbatim}
+		[worker] spawned
+		[worker] PUT request for file 'myfile'
+		[worker] waiting for client
+		[worker] file saved
+		[worker] quitting
+	\end{verbatim}
+	
+	Výstup s žádostí \textbf{GET}:
+	\begin{verbatim}
+		KLIENT:
+		./client -h localhost -p 12345 -d myfile
+		Downloading file 'myfile'
+		Waiting for server
+		File downloaded
+		
+		SERVER:
+		[worker] spawned
+		[worker] GET request for file 'myfile'
+		[worker] waiting for client
+		[worker] file sent
+		[worker] quitting
+	\end{verbatim}
+	
+	Příklad zpracování neplatného souboru:
+	\begin{verbatim}
+		KLIENT:
+		./client -h localhost -p 12345 -d ../notmyfile
+		Can't GET file ../notmyfile
+		Error: 4: INVALID_FILE
+		An error has occured during command processing
+		
+		SERVER:
+		[worker] spawned
+		[worker] received invalid file name
+		[worker] quitting
+	\end{verbatim}
+\end{document}

@@ -1,0 +1,35 @@
+[//]: # vi:syntax=markdown
+
+# IPK 2016 - File transfer
+## Basic info
+This project implements a custom application protocol for file tranfer between
+client and server, based on socket API. Structure of the protocol is described
+in attached documentation. Both server and client are written in C++.
+
+## Server
+Server part is located in file *server.cpp*. Command line syntax is pretty
+simple:
+    `./server -p 12345`
+After exexcuting mentioned command, server will attach itself to port 12345
+and will wait for client connections. All file operations are processed in
+the current directory, so make sure to not ovewrite important files.
+
+## Client
+As one would expect, client part is implemented in file *client.cpp*. Command
+line syntax is following:
+    `./client -u hostname -p port [-u|-d] filename`
+*-u* and *-p* options are self-explanatory. The remaining two options are used
+for file upload (*-u*) and download (*-d*). All mentioned options are required, 
+but only one of *-u* and *-d* can be specified at the same time.
+
+*hostname* can be specified as a domain name or optionally as an IP address.
+
+*filename* can be any file from current client directory (neither client nor
+server support file operations on files from non-current directory).
+
+## Tests
+Attached script *test.sh* runs a simple sanity check. Script compiles both
+server and client, sets up a working environment, creates a test file for 
+upload/download and runs it through both client and server. Resulting file is
+then compared againts its original to make sure it wasn't changed during
+transport.
