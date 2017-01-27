@@ -1,0 +1,56 @@
+# ISA - IMAP client with TLS support
+Simple IMAP client with TLS support, which allows a user to download all/new
+messages/headers from a specified mailbox. IMAP4rev1 (RFC 3501) support is
+implemented via BSD sockets, for SSL/TLS support the OpenSSL library is used.
+All downloaded messages are stored in Interned Message Format (RFC 5322).
+
+## Usage
+Usage: ./imapcl server [-p port] [-T [-c certfile] [-C certdir]] [-n] [-h]
+                [-a auth_file] [-b MAILBOX] -o out_dir
+
+  server        server IP/domain name
+  -p port       server port (default: 143/993 IMAP/IMAPS)
+  -T            turn on SSL/TLS
+  -c certfile   file with SSL/TLS certificate(s)
+  -C certdir    directory with SSL/TLS certificates (default: /etc/ssl/certs)*
+  -n            read only new/unread messages
+  -h            download only email headers
+  -a auth_file  file with user credentials
+  -b MAILBOX    target mailbox name (default: INBOX)
+  -o out_dir    output directory for downloaded messsages
+
+Example auth_file:
+  username = user
+  password = pass
+
+* files in this directory must be named appropriately - see man rehash(1)
+
+## Examples
+$ ./imapcl localhost -a test/auth.conf -o download/
+Downloaded 2 messages from mailbox INBOX
+
+$ ./imapcl localhost -a test/auth.conf -o download/ -h
+Downloaded 2 message headers from mailbox INBOX
+
+$ ./imapcl localhost -a test/auth.conf -o download/ -h -n
+Downloaded 0 new message headers from mailbox INBOX
+
+$ ./imapcl localhost -a test/auth.conf -o download/ -b testbox
+Downloaded 0 messages from mailbox testbox
+
+$ ./imapcl server.tld -T -C certs/ -a auth2.conf -o download/ -b Sent
+Downloaded 51 messages from mailbox Sent
+
+$ ./imapcl server.tld -T -c server.crt -a auth2.conf -o download/ -b Trash -h
+Downloaded 96 message headers from mailbox Trash
+
+## File list
+imap.cpp
+imap.hpp
+main.cpp
+Makefile
+README
+tls.cpp
+tls.hpp
+utils.cpp
+utils.hpp
