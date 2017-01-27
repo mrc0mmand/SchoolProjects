@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <title>Projekt IIS</title>
+    <style type="text/css">
+        table { border-collapse: collapse; }
+        td, th { border: 1px solid black; padding: 0.3em 0.5em; text-align: left; }
+        dt { font-weight: bold; margin-top: 0.5em; }
+    </style>
+</head>
+<body>
+
+<h1>Krevní banka</h1>
+
+<dl>
+    <dt>Autoři</dt>
+    <dd>František Šumšal
+        <a href="mailto:xsumsa01@stud.fit.vutbr.cz">xsumsa01@stud.fit.vutbr.cz</a> -
+        správa uživatelů, uživatelské rozhraní, databáze, ...
+    </dd>
+    <dt>URL aplikace</dt>
+    <dd><a href="https://sumsal.cz/school/IIS/index.php">https://sumsal.cz/school/IIS/index.php</a></dd>
+</dl>
+
+<h2>Uživatelé systému pro testování</h2>
+<table>
+<tr><th>Login</th><th>Heslo</th><th>Role</th></tr>
+<tr><td>admin</td><td>admin</td><td>Administrátor</td></tr>
+<tr><td>user</td><td>user</td><td>Běžný uživatel (sestra, ...)</td></tr>
+<tr><td>guest</td><td>guest</td><td>Klient, případně kdokoliv, kdo má zájem o nahlédnutí do nezarezervovaných dávek</td></tr>
+</table>
+
+<h2>Implementace</h2>
+<p>
+K vlastní aplikaci se přistupuje přes soubor <strong>index.php</strong>, který
+poté dále uživatele směruje hlouběji do aplikace.
+</p>
+<ul>
+    <li><strong>{adm_,}actions.php</strong> - zpracování jednotlivých uživatelských akcí</li>
+    <li><strong>db.php</strong> - přihlašovací údaje a připojení k databázi</li>
+    <li><strong>is.php</strong> - hlavní stránka s přehledem dostupných akcí a jejich výstupy</li>
+    <li><strong>logout.php</strong> - odhlášení uživatele</li>
+    <li><strong>{adm_,}submit.php</strong> - ukladání/mazání dat do/z databáze</li>
+    <li><strong>utils.php</strong> - obecné podpůrné utility</li>
+</ul>
+Další využité soubory:
+<ul>
+    <li><strong>css/</strong> - styly využité v aplikaci</li>
+    <li><strong>assets/</strong> - ikony/obrázky využité v aplikaci</li>
+    <li><strong>db.sql</strong> - inicializační skript pro databázi (definice struktury tabulek a jejich integritních omezení + ukázková data)</li>
+</ul>
+
+<h2>Instalace</h2>
+<ul>
+<li>Zkopírujte všechny poskytnuté soubory do cílové složky webového serveru</li>
+<li>Vytvořte uživatele <strong>iis</strong> a přiřaďte mu veškerá práva pro databázi <strong>iis</strong></li>
+<li>Inicializujte databázi skriptem <strong>db.sql</strong></li>
+<li>Aplikace vyžaduje <strong>MariaDB/MySQL 5</strong> a <strong>PHP 5</strong> s podporou <strong>mysqlnd</strong></li>
+</ul>
+
+<!--
+<h2>Známé problémy</h2>
+<p>Zde popište, které body zadání (IDS a IIS) nejsou implementovány a z jakého důvodu. Např. &bdquo;Z časových důvodů nebyla implementována správa uživatelů.&rdquo; Pomůžete tím zrychlit opravování, když neimplementované funkce nebudeme muset dlouze hledat.</p>
+-->
+</body>
+</html>
