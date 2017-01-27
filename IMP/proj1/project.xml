@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project outputprefix="enigma">
+
+    <!--  Project description -->
+    <name>Enigma</name>
+    <author>Frantisek Sumsal</author>
+    <authoremail>xsumsa01@stud.fit.vutbr.cz</authoremail>
+    <revision>20161208</revision>
+    <description>Enigma machine simulator</description>
+ 
+    <!--  MCU part -->
+    <mcu>
+        <file>main.c</file>
+        <include>mcu/libs/lcd/package.xml</include>
+        <include>mcu/libs/keyboard/package.xml</include>
+    </mcu>
+
+    <!-- FPGA part -->
+    <fpga>
+        <include>fpga/ctrls/lcd/package.xml</include>
+        <include>fpga/ctrls/keyboard/package.xml</include>
+        <file>fpga/top_level.vhd</file>
+    </fpga>
+
+</project>
