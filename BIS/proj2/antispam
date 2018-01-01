@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+
+import sys
+from email import message_from_binary_file, policy
+
+from spamfilters.naivebayes import NaiveBayes
+
+def read_eml_file(filename):
+    with open(filename, "rb") as fp:
+        return message_from_binary_file(fp, policy=policy.default)
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Usage: {} email1.eml email2.eml ...".format(sys.argv[0]))
+        sys.exit(1)
+
+    b = NaiveBayes("train_spam2", "train_ham2")
+
+    for email in sys.argv[1:]:
+        try:
+            e = read_eml_file(email)
+            if b.classify(e):
+                print("{} - SPAM".format(email))
+            else:
+                print("{} - OK".format(email))
+            #print(e.get("Subject"))
+            #print(e.get_body())
+        except:
+            print("{} - FAIL".format(email))
