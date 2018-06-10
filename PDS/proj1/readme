@@ -1,0 +1,27 @@
+# pds-dhcpstarve
+Implementation of DHCP starvation attack - application performs DORA process
+until the given DHCP's address pool is depleted or maximum amount of
+reservations is reached.
+
+Usage:
+./pds-dhcpstarve -i interface
+
+where interface is a name of an interface where the attack will be executed on.
+This application requires root privileges to create RAW sockets.
+
+# pds-dhcprogue
+Implementation of a simple DHCP server which serves the client in the network
+with given network parameters. With combination of the previous application
+this could be used to take over client's traffic.
+
+Usage:
+./pds-dhcprogue -i interface -p pool -g gateway -n dns -d domain -l lease-time
+
+where:
+    interface - name of an interface where the attack will be executed on
+    pool - IPv4 address pool of the DHCP server in format first_ip-last_ip
+           e.g. 192.168.0.2-192.168.0.99
+    gateway - IPv4 address of a default gateway for the given network segment
+    dns - IPv4 address of a DNS server
+    domain - domain name in which the device is located
+    lease-time - number of seconds for each reservation
