@@ -1,0 +1,126 @@
+Architektura procesorů (ACH 2017)
+Projekt č. 1 (nbody)
+Login: xsumsa01
+
+U každého kroku proveďte měření simulace s 1000 částicemi a to na čas simulace, vektorový i skalární výkon,
+počet výpadku v cache (alespoň L1 a L2). Dále odpovězte na požadované otázky.
+
+xsumsa01: L1 miss (%) se nedá změřit přes PAPI, protože na superpočítači Anselm
+          chybí PAPI event PAPI_L1_TCA (total cache accesses)
+
+          $ papi_avail
+              Name        Code    Avail Deriv Description (Note)
+          PAPI_L1_TCA  0x80000058  No    No   Level 1 total cache accesses
+
+Krok 0: základní implementace
+=============================
+Celkový čas [s]: 69
+Výkon skalárních operací [MFLOPS]:      915.365
+Výkon vektorových operací [MFLOPS]:     858.078
+L1 miss [%]:                            ??      (TCA: ??, TCM: 610538867)
+L2 miss [%]:                            0.0108  (TCA: 616965784, TCM: 66398)
+L3 miss [%]:                            72      (TCA: 71760, TCM: 51688)
+
+Které PAPI_EVENTS jste použili pro získání počtu výpadků v paměti?
+HW countery pro L1: PAPI_L1_TCM, PAPI_L1_TCA (??)
+HW countery pro L2: PAPI_L2_TCM, PAPI_L2_TCA
+HW countery pro L3: PAPI_L3_TCM, PAPI_L3_TCA
+
+
+Krok 1: vektorizovaná implementace
+===================================
+Celkový čas [s]: 21.16
+Výkon skalárních operací [MFLOPS]:      0.427788
+Výkon vektorových operací [MFLOPS]:     8507.73
+L1 miss [%]:                            ??      (TCA: ??, TCM: 594700835)
+L2 miss [%]:                            0.00322 (TCA: 598293181, TCM: 19294)
+L3 miss [%]:                            68.1    (TCA: 19623, TCM: 13355)
+
+Jaké pragmy bylo potřeba přidat?
+- #pragma omp simd
+- #pragma omp declare simd
+Které dovětky k pragmám jste použili a jaky měly vliv na kompilátorem generované funkce? (velocity.optrpt)
+-
+
+
+Krok 2: přístupy do paměti
+=============================
+Celkový čas [s]: 24.19
+Výkon skalárních operací [MFLOPS]:      20.8865
+Výkon vektorových operací [MFLOPS]:     7402.01
+L1 miss [%]:                            ??      (TCA: ??, TCM: 575340028)
+L2 miss [%]:                            0.00676 (TCA: 573236970, TCM: 38728)
+L3 miss [%]:                            64.6    (TCA: 22285, TCM: 14386)
+
+
+Jak jste zarovnali data v paměti a informovali překladač?
+- __attribute__((aligned(64)))
+- __assume_aligned(X, 64)
+Měla tato úprava vliv na výpadky? Na výkon? Proč?
+- neměla, prodleva mezi znovuvyužitím dat je dlouhá (vnitřní cyklus)
+
+Krok 3: režie funkcí
+===================================
+3.1: spojení funkcí
+-----------------------------------
+Celkový čas [s]: 21.36
+Výkon skalárních operací [MFLOPS]:      0.000180243
+Výkon vektorových operací [MFLOPS]:     4596.92
+L1 miss [%]:                            ??      (TCA: ??, TCM: 429326836)
+L2 miss [%]:                            0.00667 (TCA: 438532544, TCM: 29237)
+L3 miss [%]:                            81.9    (TCA: 50741, TCM: 41579)
+
+3.2: úprava rozhraní
+-----------------------------------
+Celkový čas [s]: 10.63
+Výkon skalárních operací [MFLOPS]:      21.8844
+Výkon vektorových operací [MFLOPS]:     4625.35
+L1 miss [%]:                            ??      (TCA: ??, TCM: 25062888)
+L2 miss [%]:                            0.0794  (TCA: 23979916, TCM: 19046)
+L3 miss [%]:                            74.1    (TCA: 26087, TCM: 19330)
+
+3.3: bez volání funkce
+-----------------------------------
+Celkový čas [s]: 6.9
+Výkon skalárních operací [MFLOPS]:      18.9128
+Výkon vektorových operací [MFLOPS]:     7588.25
+L1 miss [%]:                            ??      (TCA: ??, TCM: 12980779)
+L2 miss [%]:                            0.0165  (TCA: 12709486, TCM: 2098)
+L3 miss [%]:                            53.1    (TCA: 6573, TCM: 3491)
+
+Která verze je nejefektivnější a proč?
+- Nejlepší verze je bez volání funkce, kde odpadá režie pro volání funkce
+  a předávání/kopírování parametrů.
+
+Krok 4: úprava složitosti výpočtu
+===================================
+Vyplňte následující tabulku, zvolte vhodné hodnoty počtu částic N:
+
+N       L1 miss [%]      L2 miss [%]  L3 miss [%]  výkon [MFLOPS]   čas [s]
+1000    ?? (783869024)   0.00138      0.638        7874.63          4.61
+1100    ?? (970320956)   0.0239       0.0492%      7747.66          5.68
+1500    ?? (1165049842)  0.143        0.00327      7881.6           6.59
+1800    ?? (2748919505)  1.23         0.0184       7992.5           14.63
+2000    ?? (3418966431)  1.92         0.000473     7988.33          18.07
+3000    ?? (7792487501)  11.8         7.11e-05     8018.65          40.52
+5000    ?? (21804089256) 35.1         3.5e-05      7982.29          113.19
+
+Cache   Size        ~ max # of particles (64B/particle)
+L1      32  KB      500
+L2      256 KB      4000
+L3      20  MB      312500
+
+Protože v cache je i pole velocities, je nutné uvažovat poloviční počet částic.
+
+Maximální počet částic v L1: 250
+Maximální počet částic v L2: 2000
+Maximální počet částic v L3: 156250
+
+Skutečné počty budou o něco nižší kvůli využití cache ostatními proměnnými
+a další režií.
+
+Popište, jaký dopad na výkon mají výpadky v~cache.
+- Zpomalení výpočtu - je nutné čekat na data z paměti a jejich načtení do cache
+Jak byste tento vliv omezili?
+- Zpracování dat po menších blocích, které se vejdou do cache
+

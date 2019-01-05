@@ -1,0 +1,151 @@
+﻿Architektura procesorů (ACH 2017)
+Projekt č. 2
+Login: xsumsa01
+
+# Generovani vyslednych casu
+export STEPS=100
+TPC="16 24 32 64 96 128 256 512 1024"
+
+for i in $TPC; do
+    echo -ne "$i "
+    THREADS_PER_BLOCK=$i make run | awk '/Time:/ {print $2}'
+done
+
+Krok 0: základní implementace
+=============================
+# STEPS=100 THREADS_PER_BLOCK=X make run
+# Run 1
+vláken/blok    čas [s]
+16             4.348439
+24             2.396853
+32             2.216004
+64             2.215804
+96             2.216752
+128            2.215522 *
+256            2.240362
+512            2.233913
+1024           2.275218
+
+# Run 2
+vláken/blok    čas [s]
+16             4.372354
+24             2.395358
+32             2.216704
+64             2.217590
+96             2.214783
+128            2.214721 *
+256            2.242089
+512            2.234956
+1024           2.280786
+
+
+Ideální počet vláken na blok: 128
+
+
+Krok 1: optimalizace kódu
+=====================
+Došlo ke zrychlení?
+Ano.
+
+Popište dva hlavní důvody:
+1) Neni nutne synchronizovat vlakna pred zapisem do globalni pameti
+2) Odpada rezie pri zpracovavani vice kernelu
+
+
+Porovnejte metriky s předchozím krokem:
+# STEPS=100 THREADS_PER_BLOCK=X make run
+# Run 1
+vláken/blok    čas [s]
+16             2.749266
+24             1.375167
+32             1.350961
+64             1.351178
+96             1.350541
+128            1.350746
+192            1.412485
+256            1.359485
+512            1.357500
+1024           1.347384
+
+
+
+Krok 2: sdílená paměť
+=====================
+Došlo ke zrychlení?
+Mirne zrychleni.
+
+Zdůvodnete:
+I pres vyuziti sdilene pameti kernel stale obsahuje velke mnozstvi pristupu
+do globalni pameti (iterace pres vsechny castice). Ulozeni vsech castic
+do sdilene pameti by vsak pri vyssim poctu castic bylo nemozne.
+
+
+Porovnejte metriky s předchozím krokem:
+# STEPS=100 THREADS_PER_BLOCK=X make run
+# Run 1
+vláken/blok    čas [s]
+16             2.702960
+24             1.334822
+32             1.328945
+64             1.328467
+96             1.329400
+128            1.330142
+192            1.389911
+256            1.334974
+512            1.335588
+1024           1.340160
+
+
+
+Krok 3: analýza výkonu
+======================
+N       čas CPU [s]     čas GPU [s]      propustnost paměti [MB/s]  výkon [MFLOPS]  zrychlení [-]
+1024    0.073           0.033024         1226.4448                  4187.6899       2.21x
+2048    0.294           0.065666         2454.7328                  8427.6869       4.48x
+4096    1.155           0.132935         4826.5216                  16655.6698      8.69x
+8192    4.8192          0.265874         9648.3328                  33314.3812      18.13x
+16384   18.548          0.554009         18497.536                  63955.6397      33.48x
+32768   74.191          2.370331         17278.976                  14948.1232      31.88x
+65535   296.065         9.288889         17591.296                  -               31.88x
+131072  -               33.184401        19761.152                  -               -
+
+Od jakého počtu částic se vyplatí počítat na grafické kartě?
+4096
+
+# STEPS=10
+# Cas [s] GPU s X thready pro Y castic (* znaci nejlepsi cas)
+part_count  64          128         192         256         512         1024
+-------------------------------------------------------------------------------
+1024        0.035325    0.035377    0.035301    0.033024*   0.033671    0.033749
+2048        0.070153    0.069919    0.070124    0.065666*   0.067011    0.067231
+4096        0.132935*   0.133116    0.138991    0.133735    0.133885    0.133953
+8192        0.266159    0.266213    0.266429    0.265874*   0.265908    0.267532
+16384       1.053473    0.554548    0.574936    0.554009*   0.594754    1.058639
+32768       3.164050    2.371477    2.390661    2.371188    2.370331*   3.183694
+65535       10.581350   9.469938    9.288889*   9.466239    9.465168    10.669188
+131072      42.322307   33.196910   33.194766   33.184401*  33.184846   42.630894
+
+# STEPS=10
+# Cas [s] CPU (paralelni verze je ~10x rychlejsi nez sekvencni)
+part_count  sequential  ~parallel
+--------------------------------------
+1024        0.73        0.073
+2048        2.94        0.294
+4096        11.55       1.155
+8192        46.37       4.8192
+16384       185.48      18.548
+32768       741.91      74.191
+65535       2960.65     296.065
+131072      JOB_TIMEOUT -
+
+# Performance
+part_count  gld_throughput  gst_throughput  flop_count_sp       MFLOPS
+------------------------------------------------------------------------------
+1024        1.1977GB/s      6.6757MB/s      138294272           4187.6899
+2048        2.3972GB/s      6.6757MB/s      553412488           8427.6869
+4096        4.7134GB/s      6.6757MB/s      2214121472          16655.6698
+8192        9.4222GB/s      6.6757MB/s      8857427788          33314.3812
+16384       18.064GB/s      6.6757MB/s      3.5432e+10          63955.6397
+32768       16.874GB/s      2.8610MB/s      1.4173e+11          14948.1232
+65535       17.179GB/s      976.56KB/s      COUNTER_OVERFLOW    -
+131072      19.298GB/s      926.27KB/s      COUNTER_OVERFLOW    -
